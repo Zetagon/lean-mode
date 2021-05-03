@@ -43,6 +43,11 @@
            (candidates (-map 'helm-lean-definitions-format-candidate results)))
       candidates)))
 
+(defvar helm-lean-definitions-actions
+  '(("Go to" . (lambda (c) (with-helm-current-buffer
+                             (apply 'lean-find-definition-cont (plist-get c :source)))))))
+
+
 ;;;###autoload
 (defun helm-lean-definitions ()
   "Open a 'helm' interface for searching Lean definitions."
@@ -53,8 +58,7 @@
                    :candidates 'helm-lean-definitions-candidates
                    :volatile t
                    :match 'identity
-                   :action '(("Go to" . (lambda (c) (with-helm-current-buffer
-                                                      (apply 'lean-find-definition-cont (plist-get c :source)))))))
+                   :action helm-lean-definitions-actions)
         :buffer "*helm Lean definitions*"))
 
 ;;;###autoload
