@@ -50,6 +50,7 @@ BUFFER is the buffer to get candidates for."
   (lambda (action)
     (pcase-exhaustive action
       ('nil (funcall async action))
+      ('setup (funcall async action))
       (stringp
        (when-let ((res (and (not (string-empty-p action))
                             (consult-lean--definitions-builder action buffer))))
