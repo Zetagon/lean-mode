@@ -26,13 +26,17 @@
   "Lean Keybinding for helm-lean-definitions."
   :group 'lean-keybinding :type 'key-sequence)
 
-(defun consult-lean-definitions-format-candidate (c)
-  "Format C for minibuffer completion."
-  `(,(format "%s : %s %s"
-             (propertize (plist-get c :text) 'face font-lock-variable-name-face)
-             (plist-get c :type)
-             (propertize (plist-get (plist-get c :source) :file) 'face font-lock-comment-face))
-    . ,c))
+(defvar consult-lean--definitions-history nil)
+
+(defun consult-lean--definitions-annotate-candidate (s)
+  "Annotate S."
+  (let ((meta-data (get-text-property 0 'meta-data s)))
+    (format " : %s %s"
+            (plist-get meta-data :type)
+            (propertize (plist-get (plist-get meta-data
+                                              :source)
+                                   :file)
+                        'face font-lock-comment-face))))
 
 (defun consult-lean--definitions-builder (input buffer)
   "Generate candidates from user INPUT in BUFFER."
@@ -40,7 +44,9 @@
     (let* ((response (lean-server-send-synchronous-command 'search (list :query input)))
            (results (plist-get response :results))
            (results (seq-filter (lambda (c) (plist-get c :source)) results))
-           (candidates (seq-map 'consult-lean-definitions-format-candidate results)))
+           (candidates (seq-map (lambda (c) (propertize (plist-get c :text)
+                                                        'meta-data c))
+                                results)))
       candidates)))
 
 (defun consult-lean--make-async-source (async buffer)
@@ -62,11 +68,11 @@ BUFFER is the buffer to get candidates for."
 (defun consult-lean--lookup (selected candidates _input _narrow)
   "Get complete metadata from SELECTED among CANDIDATES."
   (plist-get
-   (cdr
-    (car (seq-drop-while (lambda (x)
-                           (not (string-equal selected
-                                              (substring-no-properties (car x)))))
-                         candidates)))
+   (get-text-property 0 'meta-data
+                      (car (seq-drop-while (lambda (x)
+                                             (not (string-equal selected
+                                                                (substring-no-properties x))))
+                                           candidates)))
    :source))
 
 (defun consult-lean-definitions ()
@@ -82,8 +88,12 @@ BUFFER is the buffer to get candidates for."
                                     ;; command is first launched.
                                     (consult--async-throttle)
                                     (consult--async-split))
-                      :lookup #'consult-lean--lookup
-                      :prompt "Definition: ")))
+                      :prompt "Definition: "
+                      :require-match t
+                      :history consult-lean--definitions-history
+                      :category 'lean-symbols
+                      :annotate #'consult-lean--definitions-annotate-candidate
+                      :lookup #'consult-lean--lookup)))
     (apply 'lean-find-definition-cont
            user-choice)))
 
