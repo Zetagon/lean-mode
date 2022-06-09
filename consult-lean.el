@@ -99,10 +99,6 @@ BUFFER is the buffer to get candidates for."
                       (thread-first (consult--async-sink)
                                     (consult--async-refresh-immediate)
                                     (consult-lean--make-async-source (current-buffer))
-                                    ;; causes `candidate' in
-                                    ;; `consult-lean--lookup' to not be
-                                    ;; updated.  It is unchanged after the
-                                    ;; command is first launched.
                                     (consult--async-throttle)
                                     (consult--async-split))
                       :prompt "Definition: "
@@ -133,10 +129,6 @@ BUFFER is the buffer to get candidates for."
                       (thread-first (consult--async-sink)
                                     (consult--async-refresh-immediate)
                                     (consult-lean--make-async-source (current-buffer))
-                                    ;; causes `candidate' in
-                                    ;; `consult-lean--lookup' to not be
-                                    ;; updated.  It is unchanged after the
-                                    ;; command is first launched.
                                     (consult--async-throttle)
                                     (consult--async-split))
                       :prompt "Definition: "
