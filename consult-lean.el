@@ -101,7 +101,8 @@ BUFFER is the buffer to get candidates for."
                                     (consult--async-refresh-immediate)
                                     (consult-lean--make-async-source (current-buffer))
                                     (consult--async-throttle)
-                                    (consult--async-split))
+                                    ;; (consult--async-split)
+                                    )
                       :prompt "Definition: "
                       :require-match t
                       :history consult-lean--definitions-history
