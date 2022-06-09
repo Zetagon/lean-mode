@@ -40,6 +40,16 @@
                                    :file)
                         'face font-lock-comment-face))))
 
+(defun consult-lean--documentation-annotate-candidate (s)
+  "Annotate S."
+  (let ((meta-data (get-text-property 0 'meta-data s)))
+    (format " : %s %s"
+            (plist-get meta-data :type)
+            (propertize (or (plist-get meta-data
+                                       :doc)
+                            "")
+                        'face font-lock-comment-face))))
+
 (defun consult-lean--definitions-builder (input buffer)
   "Generate candidates from user INPUT in BUFFER."
   (with-current-buffer buffer
@@ -133,7 +143,7 @@ BUFFER is the buffer to get candidates for."
                       :require-match t
                       :history consult-lean--definitions-history
                       :category 'lean-symbols
-                      :annotate #'consult-lean--definitions-annotate-candidate
+                      :annotate #'consult-lean--documentation-annotate-candidate
                       :lookup #'consult-lean--lookup)))
     (consult-lean--documentation user-choice)))
 
