@@ -45,10 +45,11 @@
   (let ((meta-data (get-text-property 0 'meta-data s)))
     (format " : %s %s"
             (plist-get meta-data :type)
-            (propertize (or (plist-get meta-data
-                                       :doc)
-                            "")
-                        'face font-lock-comment-face))))
+            (propertize
+             (truncate-string-to-width
+              (or (plist-get meta-data :doc) "")
+              60)
+             'face font-lock-comment-face))))
 
 (defun consult-lean--definitions-builder (input buffer)
   "Generate candidates from user INPUT in BUFFER."
