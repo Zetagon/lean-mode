@@ -116,10 +116,19 @@ BUFFER is the buffer to get candidates for."
     (view-mode -1)
     (erase-buffer)
     (visual-line-mode)
-    (if-let ((doc (plist-get (get-text-property 0 'meta-data
-                                                candidate) :doc)))
-        (insert doc)
-      (error "Couldn't find documentation for: %s" (substring-no-properties candidate)))
+    (let* ((meta-data (get-text-property 0 'meta-data
+                                         candidate))
+           (doc (plist-get meta-data :doc))
+           (name (plist-get meta-data :text))
+           (type (plist-get meta-data :type)))
+      (insert (propertize name
+                          'face 'font-lock-variable-name-face)
+              ": "
+              (propertize type
+                          'face 'font-lock-type-face) "\n")
+      (insert doc))
+    (view-mode)
+    (pop-to-buffer consult-lean--doc-buffer-name)))
     (view-mode)
     (pop-to-buffer consult-lean--doc-buffer-name)))
 
