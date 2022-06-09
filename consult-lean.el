@@ -43,10 +43,11 @@
   (with-current-buffer buffer
     (let* ((response (lean-server-send-synchronous-command 'search (list :query input)))
            (results (plist-get response :results))
-           (results (seq-filter (lambda (c) (plist-get c :source)) results))
-           (candidates (seq-map (lambda (c) (propertize (plist-get c :text)
-                                                        'meta-data c))
-                                results)))
+           (sources (seq-filter (lambda (c) (plist-get c :source)) results))
+           (candidates (seq-map (lambda (s)
+                                  (propertize (plist-get s :text)
+                                              'meta-data s))
+                                sources)))
       candidates)))
 
 (defun consult-lean--make-async-source (async buffer)
@@ -67,13 +68,11 @@ BUFFER is the buffer to get candidates for."
 
 (defun consult-lean--lookup (selected candidates _input _narrow)
   "Get complete metadata from SELECTED among CANDIDATES."
-  (plist-get
-   (get-text-property 0 'meta-data
-                      (car (seq-drop-while (lambda (x)
-                                             (not (string-equal selected
-                                                                (substring-no-properties x))))
-                                           candidates)))
-   :source))
+  (get-text-property 0 'meta-data
+                     (car (seq-drop-while (lambda (x)
+                                            (not (string-equal selected
+                                                               (substring-no-properties x))))
+                                          candidates))))
 
 (defun consult-lean-definitions ()
   "Find a Lean definition using consult."
@@ -94,8 +93,34 @@ BUFFER is the buffer to get candidates for."
                       :category 'lean-symbols
                       :annotate #'consult-lean--definitions-annotate-candidate
                       :lookup #'consult-lean--lookup)))
-    (apply 'lean-find-definition-cont
-           user-choice)))
+    (apply #'lean-find-definition-cont (plist-get user-choice :source))))
+
+(defun consult-lean-documentation ()
+  "Find a Lean definition using consult."
+  (interactive)
+  (let ((user-choice (consult--read
+                      (thread-first (consult--async-sink)
+                                    (consult--async-refresh-immediate)
+                                    (consult-lean--make-async-source (current-buffer))
+                                    ;; causes `candidate' in
+                                    ;; `consult-lean--lookup' to not be
+                                    ;; updated.  It is unchanged after the
+                                    ;; command is first launched.
+                                    (consult--async-throttle)
+                                    (consult--async-split))
+                      :prompt "Definition: "
+                      :require-match t
+                      :history consult-lean--definitions-history
+                      :category 'lean-symbols
+                      :annotate #'consult-lean--definitions-annotate-candidate
+                      :lookup (lambda (selected candidates _input _narrow)
+                                (get-text-property 0 'meta-data
+                                                   (car (seq-drop-while (lambda (x)
+                                                                          (not (string-equal selected
+                                                                                             (substring-no-properties x))))
+                                                                        candidates))) ))))
+    (message "documentation: %s" () ;; (plist-get user-choice :doc)
+             user-choice)))
 
 ;;;###autoload
 (defun consult-lean-hook ()
