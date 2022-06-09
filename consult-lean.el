@@ -28,6 +28,8 @@
 
 (defvar consult-lean--definitions-history nil)
 
+(defvar consult-lean--doc-buffer-name "*consult-lean-doc*")
+
 (defun consult-lean--definitions-annotate-candidate (s)
   "Annotate S."
   (let ((meta-data (get-text-property 0 'meta-data s)))
@@ -68,11 +70,17 @@ BUFFER is the buffer to get candidates for."
 
 (defun consult-lean--lookup (selected candidates _input _narrow)
   "Get complete metadata from SELECTED among CANDIDATES."
-  (get-text-property 0 'meta-data
-                     (car (seq-drop-while (lambda (x)
-                                            (not (string-equal selected
-                                                               (substring-no-properties x))))
-                                          candidates))))
+  (car (seq-drop-while (lambda (x)
+                         (not (string-equal selected
+                                            (substring-no-properties x))))
+                       candidates)))
+
+(defun consult-lean--definitions (candidate)
+  "foojlkj"
+  (apply #'lean-find-definition-cont
+         (plist-get
+          (get-text-property 0 'meta-data
+                             candidate) :source)))
 
 (defun consult-lean-definitions ()
   "Find a Lean definition using consult."
@@ -93,7 +101,20 @@ BUFFER is the buffer to get candidates for."
                       :category 'lean-symbols
                       :annotate #'consult-lean--definitions-annotate-candidate
                       :lookup #'consult-lean--lookup)))
-    (apply #'lean-find-definition-cont (plist-get user-choice :source))))
+    (consult-lean--definitions user-choice)))
+
+(defun consult-lean--documentation (candidate)
+  "foojlkj"
+  (with-current-buffer (get-buffer-create consult-lean--doc-buffer-name)
+    (view-mode -1)
+    (erase-buffer)
+    (visual-line-mode)
+    (if-let ((doc (plist-get (get-text-property 0 'meta-data
+                                                candidate) :doc)))
+        (insert doc)
+      (error "Couldn't find documentation for: %s" (substring-no-properties candidate)))
+    (view-mode)
+    (pop-to-buffer consult-lean--doc-buffer-name)))
 
 (defun consult-lean-documentation ()
   "Find a Lean definition using consult."
@@ -113,14 +134,8 @@ BUFFER is the buffer to get candidates for."
                       :history consult-lean--definitions-history
                       :category 'lean-symbols
                       :annotate #'consult-lean--definitions-annotate-candidate
-                      :lookup (lambda (selected candidates _input _narrow)
-                                (get-text-property 0 'meta-data
-                                                   (car (seq-drop-while (lambda (x)
-                                                                          (not (string-equal selected
-                                                                                             (substring-no-properties x))))
-                                                                        candidates))) ))))
-    (message "documentation: %s" () ;; (plist-get user-choice :doc)
-             user-choice)))
+                      :lookup #'consult-lean--lookup)))
+    (consult-lean--documentation user-choice)))
 
 ;;;###autoload
 (defun consult-lean-hook ()
@@ -129,6 +144,16 @@ BUFFER is the buffer to get candidates for."
 
 ;;;###autoload
 (add-hook 'lean-mode-hook #'consult-lean-hook)
+
+(embark-define-keymap embark-lean-symbols-map
+  "Example keymap with a few file actions"
+  ("d" consult-lean--definitions)
+  ("D" consult-lean--documentation))
+(define-key embark-lean-symbols-map
+  "D" #'consult-lean--documentation)
+(define-key embark-lean-symbols-map
+  "d" #'consult-lean--definitions)
+(add-to-list 'embark-keymap-alist '(lean-symbols . embark-lean-symbols-map))
 
 (provide 'consult-lean)
 ;;; consult-lean.el ends here
